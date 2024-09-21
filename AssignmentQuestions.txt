@@ -57,8 +57,7 @@ def reduce_inventory(sender, **kwargs):
 
 def process_order():
     with transaction.atomic():
-        print("Processing payment.")
-        payment_successful = True  
+        print("Processing payment.") 
         if not payment_successful:
             raise Exception("Payment failed!")
         payment_processed.send(sender=None)
