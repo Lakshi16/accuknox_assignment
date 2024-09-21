@@ -1,0 +1,88 @@
+Q 1: Are Django signals executed synchronously or asynchronously by default?
+
+Django signals are executed synchronously. So when a signal is sent, the functions connected to that signal finish before moving on.
+
+from django.dispatch import receiver
+from django.db.models.signals import post_save
+
+@receiver(post_save, sender=Book)
+def log_book_saved(sender, instance, created, **kwargs):
+    if created:
+        print(f"Book '{instance.title}' by {instance.author} saved!")
+
+def create_book(title, author):
+    book = Book(title=title, author=author)
+    book.save()  
+
+create_book("Harry Potter", "J.K.Rowling")
+print("Book creation process complete.")
+
+The program waits for log_book_saved function to complete its execution before printing "Book creation process complete." This shows that Django signals are executed synchronously by default - the code does not proceed until the signal receiver has finished its task.
+
+Q 2: Do Django signals run in the same thread as the caller?
+
+Django signals are executed in the same thread as the caller. So when a signal is sent all the connected receiver functions are executed within the same thread.
+
+import threading
+from django.dispatch import Signal, receiver
+
+message_sent = Signal()
+
+@receiver(message_sent)
+def notify_sender(sender, **kwargs):
+    print(f"Message sent from thread: {threading.current_thread().name}")
+
+def send_message():
+    print(f"Sending message from thread: {threading.current_thread().name}")
+    message_sent.send(sender=None)
+
+send_message()
+
+
+Q 3: Do Django signals run in the same database transaction as the caller?
+
+Yes, Django signals run in the same database transaction as the caller. If a signal is triggered during a database operation, the changes will only be committed to the database if the entire transaction is successful. 
+
+For example if an item is bought from an online store, then a series of action takes place like the payment is processed, inventory is updated and email notification is sent to alert the buyer of the purchase.
+If the payment fails then none of the other actions will happen, as everything is in the same transaction.
+
+from django.db import transaction
+from django.dispatch import Signal, receiver
+
+payment_processed = Signal()
+
+@receiver(payment_processed)
+def reduce_inventory(sender, **kwargs):
+    print("Inventory reduced for the order.")
+
+def process_order():
+    with transaction.atomic():
+        print("Processing payment.")
+        payment_successful = True  
+        if not payment_successful:
+            raise Exception("Payment failed!")
+        payment_processed.send(sender=None)
+        print("Payment processed successfully.")
+
+try:
+    process_order()
+except Exception as e:
+    print(e)
+
+
+
+Q 4: Custom Class
+
+class rectangle:
+    def __init__(self, length, width):
+        self.length = length
+        self.width = width
+
+    def __iter__(self):
+        return iter([{'length': self.length}, {'width': self.width}])
+
+rect = rectangle(55, 60)
+
+for i in rect:
+    print(i)
+
